@@ -2,13 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 """FastAPI application for OpenViking HTTP Server."""
 
+import hmac
 import time
 from contextlib import asynccontextmanager
-from typing import Callable, Optional
+from typing import Any, Callable, Dict, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastmcp import FastMCP
 
 from openviking.server.config import ServerConfig, load_server_config
 from openviking.server.dependencies import set_service
@@ -48,6 +50,8 @@ def create_app(
     if config is None:
         config = load_server_config()
 
+    mcp_path = config.mcp_path.rstrip("/") or "/mcp"
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         """Application lifespan handler."""
@@ -59,7 +63,11 @@ def create_app(
             logger.info("OpenVikingService initialized")
 
         set_service(service)
-        yield
+        if config.enable_mcp:
+            async with app.state.mcp_lifespan(app):
+                yield
+        else:
+            yield
 
         # Cleanup
         if service:
@@ -94,6 +102,30 @@ def create_app(
         process_time = time.time() - start_time
         response.headers["X-Process-Time"] = str(process_time)
         return response
+
+    @app.middleware("http")
+    async def protect_mcp_endpoint(request: Request, call_next: Callable):
+        is_mcp_request = request.url.path == mcp_path or request.url.path.startswith(f"{mcp_path}/")
+        if config.enable_mcp and config.api_key and is_mcp_request:
+            request_api_key = request.headers.get("X-API-Key")
+            if not request_api_key:
+                authorization = request.headers.get("Authorization", "")
+                if authorization.startswith("Bearer "):
+                    request_api_key = authorization[7:]
+
+            if not request_api_key or not hmac.compare_digest(request_api_key, config.api_key):
+                return JSONResponse(
+                    status_code=401,
+                    content=Response(
+                        status="error",
+                        error=ErrorInfo(
+                            code="UNAUTHENTICATED",
+                            message="Invalid API Key",
+                        ),
+                    ).model_dump(),
+                )
+
+        return await call_next(request)
 
     # Add exception handler for OpenVikingError
     @app.exception_handler(OpenVikingError)
@@ -137,5 +169,21 @@ def create_app(
     app.include_router(pack_router)
     app.include_router(debug_router)
     app.include_router(observer_router)
+
+    # Expose the existing HTTP API as MCP tools on the configured MCP path.
+    mcp_httpx_kwargs: Dict[str, Any] = {}
+    if config.api_key:
+        mcp_httpx_kwargs["headers"] = {"X-API-Key": config.api_key}
+
+    if config.enable_mcp:
+        mcp_server = FastMCP.from_fastapi(
+            app=app,
+            name="OpenViking MCP",
+            httpx_client_kwargs=mcp_httpx_kwargs or None,
+        )
+        mcp_app = mcp_server.http_app(path="/")
+        app.mount(mcp_path, mcp_app)
+        app.state.mcp_path = mcp_path
+        app.state.mcp_lifespan = mcp_app.lifespan
 
     return app
