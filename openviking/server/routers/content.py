@@ -11,7 +11,7 @@ from openviking.server.models import Response
 router = APIRouter(prefix="/api/v1/content", tags=["content"])
 
 
-@router.get("/read")
+@router.get("/read", operation_id="content_read")
 async def read(
     uri: str = Query(..., description="Viking URI"),
     _: bool = Depends(verify_api_key),
@@ -22,7 +22,7 @@ async def read(
     return Response(status="ok", result=result)
 
 
-@router.get("/abstract")
+@router.get("/abstract", operation_id="content_abstract")
 async def abstract(
     uri: str = Query(..., description="Viking URI"),
     _: bool = Depends(verify_api_key),
@@ -33,7 +33,7 @@ async def abstract(
     return Response(status="ok", result=result)
 
 
-@router.get("/overview")
+@router.get("/overview", operation_id="content_overview")
 async def overview(
     uri: str = Query(..., description="Viking URI"),
     _: bool = Depends(verify_api_key),

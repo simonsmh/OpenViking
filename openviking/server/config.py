@@ -21,6 +21,8 @@ class ServerConfig:
     port: int = 1933
     api_key: Optional[str] = None
     cors_origins: List[str] = field(default_factory=lambda: ["*"])
+    mcp_path: str = "/mcp"
+    enable_mcp: bool = True
 
 
 def load_server_config(config_path: Optional[str] = None) -> ServerConfig:
@@ -63,6 +65,8 @@ def load_server_config(config_path: Optional[str] = None) -> ServerConfig:
         port=server_data.get("port", 1933),
         api_key=server_data.get("api_key"),
         cors_origins=server_data.get("cors_origins", ["*"]),
+        mcp_path=server_data.get("mcp_path", "/mcp"),
+        enable_mcp=server_data.get("enable_mcp", True),
     )
 
     return config

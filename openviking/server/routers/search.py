@@ -50,7 +50,7 @@ class GlobRequest(BaseModel):
     uri: str = "viking://"
 
 
-@router.post("/find")
+@router.post("/find", operation_id="search_find")
 async def find(
     request: FindRequest,
     _: bool = Depends(verify_api_key),
@@ -70,7 +70,7 @@ async def find(
     return Response(status="ok", result=result)
 
 
-@router.post("/search")
+@router.post("/search", operation_id="search_search")
 async def search(
     request: SearchRequest,
     _: bool = Depends(verify_api_key),
@@ -98,7 +98,7 @@ async def search(
     return Response(status="ok", result=result)
 
 
-@router.post("/grep")
+@router.post("/grep", operation_id="search_grep")
 async def grep(
     request: GrepRequest,
     _: bool = Depends(verify_api_key),
@@ -113,7 +113,7 @@ async def grep(
     return Response(status="ok", result=result)
 
 
-@router.post("/glob")
+@router.post("/glob", operation_id="search_glob")
 async def glob(
     request: GlobRequest,
     _: bool = Depends(verify_api_key),
