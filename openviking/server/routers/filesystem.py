@@ -14,7 +14,7 @@ from openviking_cli.exceptions import NotFoundError
 router = APIRouter(prefix="/api/v1/fs", tags=["filesystem"])
 
 
-@router.get("/ls")
+@router.get("/ls", operation_id="filesystem_ls")
 async def ls(
     uri: str = Query(..., description="Viking URI"),
     simple: bool = Query(False, description="Return only relative path list"),
@@ -39,7 +39,7 @@ async def ls(
     return Response(status="ok", result=result)
 
 
-@router.get("/tree")
+@router.get("/tree", operation_id="filesystem_tree")
 async def tree(
     uri: str = Query(..., description="Viking URI"),
     output: str = Query("agent", description="Output format: original or agent"),
@@ -60,7 +60,7 @@ async def tree(
     return Response(status="ok", result=result)
 
 
-@router.get("/stat")
+@router.get("/stat", operation_id="filesystem_stat")
 async def stat(
     uri: str = Query(..., description="Viking URI"),
     _: bool = Depends(verify_api_key),
@@ -82,7 +82,7 @@ class MkdirRequest(BaseModel):
     uri: str
 
 
-@router.post("/mkdir")
+@router.post("/mkdir", operation_id="filesystem_mkdir")
 async def mkdir(
     request: MkdirRequest,
     _: bool = Depends(verify_api_key),
@@ -93,7 +93,7 @@ async def mkdir(
     return Response(status="ok", result={"uri": request.uri})
 
 
-@router.delete("")
+@router.delete("", operation_id="filesystem_rm")
 async def rm(
     uri: str = Query(..., description="Viking URI"),
     recursive: bool = Query(False, description="Remove recursively"),
@@ -112,7 +112,7 @@ class MvRequest(BaseModel):
     to_uri: str
 
 
-@router.post("/mv")
+@router.post("/mv", operation_id="filesystem_mv")
 async def mv(
     request: MvRequest,
     _: bool = Depends(verify_api_key),

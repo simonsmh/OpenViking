@@ -33,7 +33,7 @@ class AddSkillRequest(BaseModel):
     timeout: Optional[float] = None
 
 
-@router.post("/resources")
+@router.post("/resources", operation_id="resources_add_resource")
 async def add_resource(
     request: AddResourceRequest,
     _: bool = Depends(verify_api_key),
@@ -51,7 +51,7 @@ async def add_resource(
     return Response(status="ok", result=result)
 
 
-@router.post("/skills")
+@router.post("/skills", operation_id="resources_add_skill")
 async def add_skill(
     request: AddSkillRequest,
     _: bool = Depends(verify_api_key),

@@ -29,7 +29,7 @@ class UnlinkRequest(BaseModel):
     to_uri: str
 
 
-@router.get("")
+@router.get("", operation_id="relations_get")
 async def relations(
     uri: str = Query(..., description="Viking URI"),
     _: bool = Depends(verify_api_key),
@@ -40,7 +40,7 @@ async def relations(
     return Response(status="ok", result=result)
 
 
-@router.post("/link")
+@router.post("/link", operation_id="relations_link")
 async def link(
     request: LinkRequest,
     _: bool = Depends(verify_api_key),
@@ -51,7 +51,7 @@ async def link(
     return Response(status="ok", result={"from": request.from_uri, "to": request.to_uris})
 
 
-@router.delete("/link")
+@router.delete("/link", operation_id="relations_unlink")
 async def unlink(
     request: UnlinkRequest,
     _: bool = Depends(verify_api_key),

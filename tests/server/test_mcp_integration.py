@@ -3,11 +3,11 @@
 
 """Tests for MCP integration in server app wiring."""
 
-from contextlib import asynccontextmanager
 import importlib
-from pathlib import Path
 import sys
 import types
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
 import pytest
@@ -58,9 +58,6 @@ def _load_app_module(monkeypatch):
 
 
 class _FakeMCPApp:
-    def __init__(self, path: str):
-        self._path = path
-
     @asynccontextmanager
     async def lifespan(self, _app):
         yield
@@ -68,8 +65,7 @@ class _FakeMCPApp:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return
-        status_code = 204 if scope["path"] == self._path else 404
-        await send({"type": "http.response.start", "status": status_code, "headers": []})
+        await send({"type": "http.response.start", "status": 204, "headers": []})
         await send({"type": "http.response.body", "body": b""})
 
 
@@ -79,15 +75,23 @@ class _FakeMCPServer:
 
     def http_app(self, path: str = "/mcp"):
         self._captured["http_app_path"] = path
-        return _FakeMCPApp(path=path)
+        return _FakeMCPApp()
 
 
 def _patch_fastmcp(monkeypatch, app_module, captured):
     class _FakeFastMCP:
         @classmethod
-        def from_fastapi(cls, app, name=None, httpx_client_kwargs=None):
+        def from_fastapi(
+            cls,
+            app,
+            name=None,
+            route_maps=None,
+            httpx_client_kwargs=None,
+            **_,
+        ):
             captured["app"] = app
             captured["name"] = name
+            captured["route_maps"] = route_maps
             captured["httpx_client_kwargs"] = httpx_client_kwargs
             return _FakeMCPServer(captured)
 
@@ -103,8 +107,26 @@ def test_mcp_mount_and_api_key_passthrough(monkeypatch):
 
     assert captured["app"] is app
     assert captured["name"] == "OpenViking MCP"
-    assert captured["httpx_client_kwargs"] == {"headers": {"X-API-Key": "test-key"}}
-    assert captured["http_app_path"] == "/mcp"
+    assert captured["httpx_client_kwargs"] is None
+    assert isinstance(captured["route_maps"], list)
+    expected_tags = {"content", "filesystem", "resources", "search", "sessions", "relations"}
+    route_maps = captured["route_maps"]
+
+    for tag in expected_tags:
+        assert any(
+            route_map.tags == {tag}
+            and route_map.methods == ["GET"]
+            and route_map.mcp_type.name == "RESOURCE"
+            for route_map in route_maps
+        )
+        assert any(
+            route_map.tags == {tag}
+            and route_map.methods == ["POST", "DELETE"]
+            and route_map.mcp_type.name == "TOOL"
+            for route_map in route_maps
+        )
+    assert route_maps[-1].mcp_type.name == "EXCLUDE"
+    assert captured["http_app_path"] == "/"
     assert app.state.mcp_path == "/mcp"
 
 
@@ -129,7 +151,7 @@ async def test_mcp_endpoint_requires_api_key(monkeypatch):
 
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         unauthorized = await client.post("/mcp")
-        authorized = await client.post("/mcp", headers={"X-API-Key": "test-key"})
+        authorized = await client.post("/mcp/", headers={"X-API-Key": "test-key"})
 
     assert unauthorized.status_code == 401
     assert authorized.status_code == 204
@@ -145,6 +167,6 @@ async def test_mcp_endpoint_without_server_api_key(monkeypatch):
     transport = httpx.ASGITransport(app=app)
 
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        response = await client.post("/mcp")
+        response = await client.post("/mcp/")
 
     assert response.status_code == 204

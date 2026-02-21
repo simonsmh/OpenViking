@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastmcp import FastMCP
+from fastmcp.server.providers.openapi import MCPType, RouteMap
 
 from openviking.server.config import ServerConfig, load_server_config
 from openviking.server.dependencies import set_service
@@ -171,15 +172,25 @@ def create_app(
     app.include_router(observer_router)
 
     # Expose the existing HTTP API as MCP tools on the configured MCP path.
-    mcp_httpx_kwargs: Dict[str, Any] = {}
-    if config.api_key:
-        mcp_httpx_kwargs["headers"] = {"X-API-Key": config.api_key}
+    mcp_route_maps = []
+    for tag in ("content", "filesystem", "resources", "search", "sessions", "relations"):
+        mcp_route_maps.append(
+            RouteMap(methods=["GET"], tags={tag}, mcp_type=MCPType.RESOURCE)
+        )
+        mcp_route_maps.append(
+            RouteMap(
+                methods=["POST", "DELETE"],
+                tags={tag},
+                mcp_type=MCPType.TOOL,
+            )
+        )
+    mcp_route_maps.append(RouteMap(mcp_type=MCPType.EXCLUDE))
 
     if config.enable_mcp:
         mcp_server = FastMCP.from_fastapi(
             app=app,
             name="OpenViking MCP",
-            httpx_client_kwargs=mcp_httpx_kwargs or None,
+            route_maps=mcp_route_maps,
         )
         mcp_app = mcp_server.http_app(path="/")
         app.mount(mcp_path, mcp_app)

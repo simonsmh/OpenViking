@@ -33,7 +33,7 @@ def _to_jsonable(value: Any) -> Any:
     return value
 
 
-@router.post("")
+@router.post("", operation_id="sessions_create")
 async def create_session(
     _: bool = Depends(verify_api_key),
 ):
@@ -49,7 +49,7 @@ async def create_session(
     )
 
 
-@router.get("")
+@router.get("", operation_id="sessions_list")
 async def list_sessions(
     _: bool = Depends(verify_api_key),
 ):
@@ -59,7 +59,7 @@ async def list_sessions(
     return Response(status="ok", result=result)
 
 
-@router.get("/{session_id}")
+@router.get("/{session_id}", operation_id="sessions_get")
 async def get_session(
     session_id: str = Path(..., description="Session ID"),
     _: bool = Depends(verify_api_key),
@@ -78,7 +78,7 @@ async def get_session(
     )
 
 
-@router.delete("/{session_id}")
+@router.delete("/{session_id}", operation_id="sessions_delete")
 async def delete_session(
     session_id: str = Path(..., description="Session ID"),
     _: bool = Depends(verify_api_key),
@@ -89,7 +89,7 @@ async def delete_session(
     return Response(status="ok", result={"session_id": session_id})
 
 
-@router.post("/{session_id}/commit")
+@router.post("/{session_id}/commit", operation_id="sessions_commit")
 async def commit_session(
     session_id: str = Path(..., description="Session ID"),
     _: bool = Depends(verify_api_key),
@@ -100,7 +100,7 @@ async def commit_session(
     return Response(status="ok", result=result)
 
 
-@router.post("/{session_id}/extract")
+@router.post("/{session_id}/extract", operation_id="sessions_extract")
 async def extract_session(
     session_id: str = Path(..., description="Session ID"),
     _: bool = Depends(verify_api_key),
@@ -111,7 +111,7 @@ async def extract_session(
     return Response(status="ok", result=_to_jsonable(result))
 
 
-@router.post("/{session_id}/messages")
+@router.post("/{session_id}/messages", operation_id="sessions_add_message")
 async def add_message(
     request: AddMessageRequest,
     session_id: str = Path(..., description="Session ID"),
