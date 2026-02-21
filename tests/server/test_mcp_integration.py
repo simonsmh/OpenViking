@@ -109,23 +109,18 @@ def test_mcp_mount_and_api_key_passthrough(monkeypatch):
     assert captured["name"] == "OpenViking MCP"
     assert captured["httpx_client_kwargs"] is None
     assert isinstance(captured["route_maps"], list)
-    expected_tags = {"content", "filesystem", "resources", "search", "sessions", "relations"}
     route_maps = captured["route_maps"]
 
-    for tag in expected_tags:
+    for tag in {"content", "filesystem", "resources", "search", "sessions", "relations"}:
         assert any(
             route_map.tags == {tag}
-            and route_map.methods == ["GET"]
-            and route_map.mcp_type.name == "RESOURCE"
-            for route_map in route_maps
-        )
-        assert any(
-            route_map.tags == {tag}
-            and route_map.methods == ["POST", "DELETE"]
+            and route_map.methods == ["GET", "POST", "DELETE"]
             and route_map.mcp_type.name == "TOOL"
             for route_map in route_maps
         )
+
     assert route_maps[-1].mcp_type.name == "EXCLUDE"
+
     assert captured["http_app_path"] == "/"
     assert app.state.mcp_path == "/mcp"
 
