@@ -5,7 +5,7 @@
 import hmac
 import time
 from contextlib import asynccontextmanager
-from typing import Any, Callable, Dict, Optional
+from typing import Callable, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -175,11 +175,8 @@ def create_app(
     mcp_route_maps = []
     for tag in ("content", "filesystem", "resources", "search", "sessions", "relations"):
         mcp_route_maps.append(
-            RouteMap(methods=["GET"], tags={tag}, mcp_type=MCPType.RESOURCE)
-        )
-        mcp_route_maps.append(
             RouteMap(
-                methods=["POST", "DELETE"],
+                methods=["GET", "POST", "DELETE"],
                 tags={tag},
                 mcp_type=MCPType.TOOL,
             )
