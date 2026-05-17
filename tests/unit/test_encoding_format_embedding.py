@@ -13,6 +13,7 @@ Covers:
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import ValidationError
 
 from openviking.models.embedder import OpenAIDenseEmbedder
 from openviking_cli.utils.config.embedding_config import EmbeddingConfig, EmbeddingModelConfig
@@ -56,7 +57,7 @@ class TestEncodingFormatConfig:
         assert cfg.encoding_format == "base64"
 
     def test_rejects_unknown_value(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             EmbeddingModelConfig(
                 provider="openai",
                 model="text-embedding-3-small",
